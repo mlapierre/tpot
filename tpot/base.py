@@ -29,6 +29,7 @@ from datetime import datetime
 from multiprocessing import cpu_count
 import os
 import re
+import errno
 
 import numpy as np
 from scipy import sparse
@@ -861,6 +862,7 @@ class TPOTBase(BaseEstimator):
 
     def _save_periodic_pipeline(self):
         try:
+            self._create_periodic_checkpoint_folder()
             filename = os.path.join(self.periodic_checkpoint_folder, 'pipeline_{}.py'.format(datetime.now().strftime('%Y.%m.%d_%H-%M-%S')))
             did_export = self.export(filename, skip_if_repeated=True)
             if not did_export:
@@ -869,6 +871,16 @@ class TPOTBase(BaseEstimator):
                 self._update_pbar(pbar_num=0, pbar_msg='Saving best periodic pipeline to {}'.format(filename))
         except Exception as e:
             self._update_pbar(pbar_num=0, pbar_msg='Failed saving periodic pipeline, exception:\n{}'.format(str(e)[:250]))
+
+
+    def _create_periodic_checkpoint_folder(self):
+        try:
+            os.makedirs(self.periodic_checkpoint_folder)
+        except OSError as e:
+            if e.errno == errno.EEXIST and os.path.isdir(self.periodic_checkpoint_folder):
+                pass
+            else:
+                raise
 
 
     def export(self, output_file_name, skip_if_repeated=False):
